@@ -41,8 +41,9 @@ jobs:
           jpackage --name GerberCostEstimator ^
             --input target --main-jar diplom-1.0-SNAPSHOT.jar ^
             --main-class org.springframework.boot.loader.launch.JarLauncher ^
-            --type exe --dest dist --app-version 1.0 --win-console ^
-            --icon src/main/resources/icons/app-icon.ico
+            --type exe --dest dist --app-version 1.0 ^
+            --icon src/main/resources/icons/app-icon.ico ^
+            --win-shortcut --win-shortcut-prompt
 
       - name: Create native installer (macOS)
         if: runner.os == 'macOS'
@@ -60,7 +61,8 @@ jobs:
             --input target --main-jar diplom-1.0-SNAPSHOT.jar \
             --main-class org.springframework.boot.loader.launch.JarLauncher \
             --type deb --dest dist --app-version 1.0 \
-            --icon src/main/resources/icons/app-icon.png
+            --icon src/main/resources/icons/app-icon.png \
+            --linux-shortcut
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4

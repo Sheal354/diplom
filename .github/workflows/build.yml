@@ -1,0 +1,65 @@
+name: Build Native Installers
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: windows-latest
+            installer_extension: exe
+          - os: macos-latest
+            installer_extension: dmg
+          - os: ubuntu-latest
+            installer_extension: deb
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Build with Maven
+        run: mvn clean package -DskipTests
+
+      - name: Create native installer (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          jpackage --name GerberCostEstimator ^
+            --input target --main-jar diplom-1.0-SNAPSHOT.jar ^
+            --main-class com.diplom.gui.GerberCostEstimatorApplication ^
+            --type exe --dest dist --app-version 1.0
+
+      - name: Create native installer (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          jpackage --name GerberCostEstimator \
+            --input target --main-jar diplom-1.0-SNAPSHOT.jar \
+            --main-class com.diplom.gui.GerberCostEstimatorApplication \
+            --type dmg --dest dist --app-version 1.0
+
+      - name: Create native installer (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          jpackage --name GerberCostEstimator \
+            --input target --main-jar diplom-1.0-SNAPSHOT.jar \
+            --main-class com.diplom.gui.GerberCostEstimatorApplication \
+            --type deb --dest dist --app-version 1.0
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ runner.os }}
+          path: dist/*.${{ matrix.installer_extension }}

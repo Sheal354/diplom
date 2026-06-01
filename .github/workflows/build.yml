@@ -40,7 +40,7 @@ jobs:
         run: |
           jpackage --name GerberCostEstimator ^
             --input target --main-jar diplom-1.0-SNAPSHOT.jar ^
-            --main-class org.springframework.boot.loader.JarLauncher ^
+            --main-class org.springframework.boot.loader.launch.JarLauncher ^
             --type exe --dest dist --app-version 1.0 --win-console ^
             --icon src/main/resources/icons/app-icon.ico
 
@@ -49,7 +49,7 @@ jobs:
         run: |
           jpackage --name GerberCostEstimator \
             --input target --main-jar diplom-1.0-SNAPSHOT.jar \
-            --main-class org.springframework.boot.loader.JarLauncher \
+            --main-class org.springframework.boot.loader.launch.JarLauncher \
             --type dmg --dest dist --app-version 1.0 \
             --icon src/main/resources/icons/app-icon.icns
 
@@ -58,7 +58,7 @@ jobs:
         run: |
           jpackage --name GerberCostEstimator \
             --input target --main-jar diplom-1.0-SNAPSHOT.jar \
-            --main-class org.springframework.boot.loader.JarLauncher \
+            --main-class org.springframework.boot.loader.launch.JarLauncher \
             --type deb --dest dist --app-version 1.0 \
             --icon src/main/resources/icons/app-icon.png
 
@@ -67,12 +67,3 @@ jobs:
         with:
           name: installer-${{ runner.os }}
           path: dist/*.${{ matrix.installer_extension }}
-
-      - name: Run installer and capture logs
-        if: runner.os == 'Windows'
-        shell: cmd
-        run: |
-          echo "Запуск приложения..."
-          dist\GerberCostEstimator.exe 2>&1 | tee app.log
-          echo "=== LOGS ==="
-          type app.log

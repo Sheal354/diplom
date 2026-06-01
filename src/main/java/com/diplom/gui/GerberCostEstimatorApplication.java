@@ -9,12 +9,15 @@ import com.diplom.gui.service.TariffApiService;
 import com.diplom.gui.view.MainView;
 import javafx.application.Application;
 import javafx.scene.Scene;
+import javafx.scene.image.Image;
 import javafx.stage.Stage;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+
+import java.util.Objects;
 
 @SpringBootApplication(scanBasePackages = "com.diplom")
 @EnableJpaRepositories("com.diplom.persistence.repository")
@@ -30,6 +33,7 @@ public class GerberCostEstimatorApplication extends Application {
         TariffApiService tariffApiService = springContext.getBean(TariffApiService.class);
         CalculationApiService calculationApiService = springContext.getBean(CalculationApiService.class);
         AuthApiService authApiService = springContext.getBean(AuthApiService.class);
+        primaryStage.getIcons().add(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/icons/app-icon.png"))));
         MainView mainView = new MainView(parser, svgService, producerApiService, authApiService, tariffApiService,
                 calculationApiService);
         Scene scene = new Scene(mainView, 1000, 600);

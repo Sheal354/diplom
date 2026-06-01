@@ -41,7 +41,8 @@ jobs:
           jpackage --name GerberCostEstimator ^
             --input target --main-jar diplom-1.0-SNAPSHOT.jar ^
             --main-class com.diplom.gui.GerberCostEstimatorApplication ^
-            --type exe --dest dist --app-version 1.0
+            --type exe --dest dist --app-version 1.0 --win-console ^
+            --icon src/main/resources/icons/app-icon.ico
 
       - name: Create native installer (macOS)
         if: runner.os == 'macOS'
@@ -49,7 +50,8 @@ jobs:
           jpackage --name GerberCostEstimator \
             --input target --main-jar diplom-1.0-SNAPSHOT.jar \
             --main-class com.diplom.gui.GerberCostEstimatorApplication \
-            --type dmg --dest dist --app-version 1.0
+            --type dmg --dest dist --app-version 1.0 ^
+            --icon src/main/resources/icons/app-icon.icns
 
       - name: Create native installer (Linux)
         if: runner.os == 'Linux'
@@ -57,7 +59,8 @@ jobs:
           jpackage --name GerberCostEstimator \
             --input target --main-jar diplom-1.0-SNAPSHOT.jar \
             --main-class com.diplom.gui.GerberCostEstimatorApplication \
-            --type deb --dest dist --app-version 1.0
+            --type deb --dest dist --app-version 1.0 ^
+            --icon src/main/resources/icons/app-icon.png
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4

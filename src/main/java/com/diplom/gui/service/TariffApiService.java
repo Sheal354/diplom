@@ -17,7 +17,7 @@ public class TariffApiService {
     private final String baseUrl;
 
     public TariffApiService(ApiConfig apiConfig) {
-        this.baseUrl = apiConfig.getBaseUrl() + "/tariffs";
+        this.baseUrl = apiConfig.getBaseUrl() + "/producer/tariffs";
     }
 
     public List<TariffResponseDto> getMyTariffs(String token) {

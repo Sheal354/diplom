@@ -9,6 +9,8 @@ import com.diplom.gui.service.ProducerApiService;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
 
@@ -58,7 +60,9 @@ public class ProducerPanel {
         // Заголовок с кнопкой обновления
         Label panelTitle = new Label("Производители");
         panelTitle.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
-        Button refreshBtn = new Button("\uD83D\uDD04");  // 🔄
+        Image refresh = new Image(getClass().getResourceAsStream("/icons/refresh-icon.png"));
+        Button refreshBtn = new Button();
+        refreshBtn.setGraphic(new ImageView(refresh));
         refreshBtn.setTooltip(new Tooltip("Обновить список"));
         refreshBtn.setOnAction(e -> {
             producersLoaded = false;

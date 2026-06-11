@@ -76,7 +76,7 @@ public class ProducerPanel {
         producersList = new VBox(10);
         ScrollPane scrollPane = new ScrollPane(producersList);
         scrollPane.setFitToWidth(true);
-        scrollPane.setPrefViewportHeight(400);
+        scrollPane.setPrefViewportHeight(1000);
 
         panel.getChildren().addAll(headerRow, scrollPane);
     }

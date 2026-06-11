@@ -30,7 +30,6 @@ public class LoginStage extends Stage {
     public LoginStage(AuthApiService authApiService) {
         this.authApiService = authApiService;
         initModality(Modality.APPLICATION_MODAL);
-        setTitle("Вход / Регистрация");
         buildUI();
     }
 
@@ -118,9 +117,11 @@ public class LoginStage extends Stage {
         phoneField.setVisible(registerMode);
 
         if (registerMode) {
+            setTitle("Регистрация");
             submitBtn.setText("Зарегистрироваться");
             toggleLink.setText("Уже зарегистрированы? Авторизуйтесь");
         } else {
+            setTitle("Авторизация");
             submitBtn.setText("Войти");
             toggleLink.setText("Нет учетной записи? Зарегистрируйтесь");
         }

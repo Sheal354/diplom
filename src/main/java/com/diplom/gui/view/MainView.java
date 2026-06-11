@@ -13,6 +13,7 @@ import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
+import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 
 import java.io.File;
@@ -53,8 +54,12 @@ public class MainView extends BorderPane {
 
     private void buildUI() {
         // Верхняя панель
-        Button chooseFileBtn = new Button("Выбрать ZIP-архив");
-        Label fileLabel = new Label("Файл не выбран");
+        MenuButton sourceMenuButton = new MenuButton("Выбрать проект");
+        MenuItem zipItem = new MenuItem("Из ZIP-архива...");
+        MenuItem folderItem = new MenuItem("Из папки...");
+        sourceMenuButton.getItems().addAll(zipItem, folderItem);
+
+        Label fileLabel = new Label("Проект не выбран");
 
         ToggleButton boardViewToggle = new ToggleButton("Вид платы");
         boardViewToggle.setOnAction(e -> visualizationPane.setBoardViewMode(boardViewToggle.isSelected()));
@@ -74,11 +79,33 @@ public class MainView extends BorderPane {
             }
         });
 
-        HBox topPanel = new HBox(10, chooseFileBtn, fileLabel, boardViewToggle,
+        HBox topPanel = new HBox(10, sourceMenuButton, fileLabel, boardViewToggle,
                 togglePanelButton, new Region(), loginBtn);
         topPanel.setPadding(new Insets(10));
         HBox.setHgrow(topPanel.getChildren().get(4), Priority.ALWAYS);
         setTop(topPanel);
+
+        // Обработчики выбора источника
+        zipItem.setOnAction(e -> {
+            FileChooser chooser = new FileChooser();
+            chooser.getExtensionFilters().add(
+                    new FileChooser.ExtensionFilter("ZIP архивы", "*.zip"));
+            File file = chooser.showOpenDialog(getScene().getWindow());
+            if (file != null) {
+                fileLabel.setText(file.getName());
+                parseAndDisplayFromZip(file);
+            }
+        });
+
+        folderItem.setOnAction(e -> {
+            DirectoryChooser dirChooser = new DirectoryChooser();
+            dirChooser.setTitle("Выберите папку с Gerber-файлами");
+            File dir = dirChooser.showDialog(getScene().getWindow());
+            if (dir != null) {
+                fileLabel.setText(dir.getName());
+                parseAndDisplayFromDirectory(dir);
+            }
+        });
 
         // Левая часть
         parametersArea = new TextArea();
@@ -89,6 +116,7 @@ public class MainView extends BorderPane {
         layerListPanel = new LayerListPanel();
         layerListPanel.setOnToggle(this::onLayerToggle);
         layerListPanel.setOnColorChange(this::onLayerColorChange);
+        layerListPanel.setOnDelete(this::deleteLayer);
 
         VBox leftPanel = new VBox(10, parametersArea, layerListPanel);
         leftPanel.setPadding(new Insets(5));
@@ -126,34 +154,13 @@ public class MainView extends BorderPane {
         visualizationPane.setMinWidth(400);
         visualizationPane.setMinHeight(300);
         SplitPane.setResizableWithParent(leftPanel, false);
-
-        chooseFileBtn.setOnAction(e -> {
-            FileChooser chooser = new FileChooser();
-            chooser.getExtensionFilters().add(
-                    new FileChooser.ExtensionFilter("ZIP архивы", "*.zip"));
-            File file = chooser.showOpenDialog(getScene().getWindow());
-            if (file != null) {
-                fileLabel.setText(file.getName());
-                parseAndDisplay(file);
-            }
-        });
     }
 
-    private void parseAndDisplay(File zipFile) {
+    private void parseAndDisplayFromZip(File zipFile) {
         new Thread(() -> {
             try (FileInputStream fis = new FileInputStream(zipFile)) {
                 ParseResult parseResult = parser.parseFromZip(fis);
-                BoardParameters board = parseResult.getBoardParameters();
-                Map<BoardLayer, ?> docs = parseResult.getLayerDocuments();
-
-                Platform.runLater(() -> {
-                    currentBoardParameters = board;
-                    parametersArea.setText(formatParameters(board));
-                    layerListPanel.setLayers(board.getLayers());
-                    visualizationPane.setLayers(docs);
-                    syncColorsFromVisualization(docs);
-                    togglePanelButton.setVisible(true);
-                });
+                updateUIAfterParsing(parseResult);
             } catch (IOException ex) {
                 Platform.runLater(() ->
                         parametersArea.setText("Ошибка чтения архива: " + ex.getMessage()));
@@ -162,6 +169,35 @@ public class MainView extends BorderPane {
                         parametersArea.setText("Ошибка: " + ex.getMessage()));
             }
         }).start();
+    }
+
+    private void parseAndDisplayFromDirectory(File directory) {
+        new Thread(() -> {
+            try {
+                ParseResult parseResult = parser.parseFromDirectory(directory);
+                updateUIAfterParsing(parseResult);
+            } catch (IOException ex) {
+                Platform.runLater(() ->
+                        parametersArea.setText("Ошибка чтения папки: " + ex.getMessage()));
+            } catch (Exception ex) {
+                Platform.runLater(() ->
+                        parametersArea.setText("Ошибка: " + ex.getMessage()));
+            }
+        }).start();
+    }
+
+    private void updateUIAfterParsing(ParseResult parseResult) {
+        BoardParameters board = parseResult.getBoardParameters();
+        Map<BoardLayer, ?> docs = parseResult.getLayerDocuments();
+
+        Platform.runLater(() -> {
+            currentBoardParameters = board;
+            parametersArea.setText(formatParameters(board));
+            layerListPanel.setLayers(board.getLayers());
+            visualizationPane.setLayers(docs);
+            syncColorsFromVisualization(docs);
+            togglePanelButton.setVisible(true);
+        });
     }
 
     private String formatParameters(BoardParameters board) {
@@ -219,5 +255,22 @@ public class MainView extends BorderPane {
                 layerListPanel.updateLayerColor(layer, color);
             }
         }
+    }
+
+    /**
+     * Удаляет слой из визуализации и модели, пересчитывает параметры платы.
+     */
+    private void deleteLayer(BoardLayer layer) {
+        // Удаляем из визуализации
+        visualizationPane.removeLayer(layer);
+        // Удаляем из модели
+        currentBoardParameters.getLayers().remove(layer);
+        // Пересчитываем агрегированные параметры
+        currentBoardParameters.recalculateFromLayers();
+        // Обновляем текстовое поле параметров
+        parametersArea.setText(formatParameters(currentBoardParameters));
+        // Обновляем список слоёв в панели (восстанавливаем цвета)
+        layerListPanel.setLayers(currentBoardParameters.getLayers());
+        syncColorsFromVisualization(visualizationPane.getLayerDocuments());
     }
 }

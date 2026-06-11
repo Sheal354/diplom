@@ -9,9 +9,11 @@ import com.diplom.gerber.model.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -23,7 +25,7 @@ import java.util.zip.ZipInputStream;
 /**
  * Основной сервис парсинга Gerber-файлов и файлов сверловки.
  * <p>
- * Координирует извлечение всех данных из ZIP-архива, содержащего Gerber- и Excellon-файлы,
+ * Координирует извлечение всех данных из ZIP-архива или папки, содержащих Gerber- и Excellon-файлы,
  * и формирует сводную модель {@link BoardParameters}.
  */
 @Service
@@ -35,19 +37,48 @@ public class GerberFileParser {
     private final DrillAnalyzer drillAnalyzer;
 
     /**
-     * Главный метод парсинга. Читает ZIP-поток, обрабатывает все файлы и возвращает
-     * заполненный объект {@link BoardParameters} с геометрическими и технологическими
-     * характеристиками печатной платы.
+     * Парсит Gerber-файлы и файлы сверловки из ZIP-потока.
      *
-     * @param zipStream входной поток ZIP-архива с Gerber- и Excellon-файлами
-     * @return модель платы со всеми извлечёнными параметрами
+     * @param zipStream входной поток ZIP-архива
+     * @return результат парсинга с параметрами платы и документами слоёв
      * @throws IOException при ошибках чтения архива
      */
     public ParseResult parseFromZip(InputStream zipStream) throws IOException {
         Map<String, byte[]> files = extractZipEntries(zipStream);
+        return parseFiles(files);
+    }
 
+    /**
+     * Парсит Gerber-файлы и файлы сверловки из указанной папки.
+     * Все файлы в папке будут прочитаны; неподходящие файлы будут проигнорированы парсером.
+     *
+     * @param directory папка с Gerber- и Excellon-файлами
+     * @return результат парсинга
+     * @throws IOException если папка не существует или произошла ошибка чтения файлов
+     */
+    public ParseResult parseFromDirectory(File directory) throws IOException {
+        if (!directory.isDirectory()) {
+            throw new IllegalArgumentException("Указанный путь не является папкой: " + directory.getAbsolutePath());
+        }
+        Map<String, byte[]> files = new LinkedHashMap<>();
+        File[] fileList = directory.listFiles();
+        if (fileList != null) {
+            for (File file : fileList) {
+                if (file.isFile()) {
+                    files.put(file.getName(), Files.readAllBytes(file.toPath()));
+                }
+            }
+        }
+        return parseFiles(files);
+    }
+
+    /**
+     * Общий метод обработки набора файлов (имя -> содержимое).
+     * Выполняет классификацию, геометрический анализ и извлечение отверстий.
+     */
+    private ParseResult parseFiles(Map<String, byte[]> files) throws IOException {
         List<BoardLayer> layers = new ArrayList<>();
-        Map<BoardLayer, Object> layerDocuments = new HashMap<>();   // теперь принимает и GerberDocument, и DrillDocument
+        Map<BoardLayer, Object> layerDocuments = new HashMap<>();
         List<DrillHole> allDrillHoles = new ArrayList<>();
         boolean hasBlindVia = false;
         boolean hasBuriedVia = false;
@@ -73,13 +104,12 @@ public class GerberFileParser {
                     if (drillDoc != null && !drillDoc.getOperations().isEmpty()) {
                         allDrillHoles.addAll(drillAnalyzer.extractDrillHoles(drillDoc, fileName));
 
-                        // Создаём BoardLayer для сверловки, чтобы она отображалась в списке слоёв
                         BoardLayer drillLayer = new BoardLayer();
                         drillLayer.setName(fileName);
                         drillLayer.setType(LayerType.DRILL);
                         drillLayer.setSide(null);
                         layers.add(drillLayer);
-                        layerDocuments.put(drillLayer, drillDoc);   // сохраняем DrillDocument как значение
+                        layerDocuments.put(drillLayer, drillDoc);
 
                         boolean[] viaInfo = drillAnalyzer.determineViaType(drillDoc, fileName);
                         if (viaInfo[0]) hasBlindVia = true;
@@ -100,10 +130,6 @@ public class GerberFileParser {
     /**
      * Извлекает все файлы из ZIP-потока и возвращает отображение «имя файла - содержимое».
      * Имена файлов очищаются от пути, остаётся только короткое имя.
-     *
-     * @param zipStream входной поток ZIP-архива
-     * @return карта (имя файла - массив байтов)
-     * @throws IOException при ошибке чтения архива
      */
     private Map<String, byte[]> extractZipEntries(InputStream zipStream) throws IOException {
         Map<String, byte[]> files = new LinkedHashMap<>();
@@ -125,15 +151,6 @@ public class GerberFileParser {
 
     /**
      * Пытается разобрать один Gerber-файл и создать объект {@link BoardLayer}.
-     * Классифицирует слой, вычисляет его границы и для медных слоёв запускает
-     * расчёт минимальной ширины дорожки и минимального зазора.
-     *
-     * @param fileName    имя файла
-     * @param content     содержимое файла в виде массива байтов
-     * @param gerberParser экземпляр парсера Gerber
-     * @return заполненный {@link BoardLayer} или {@code null}, если файл не является
-     *         Gerber-слоем или не может быть обработан
-     * @throws IOException при ошибке парсинга
      */
     private ParseLayerResult parseGerberLayer(String fileName, byte[] content,
                                               GerberParser gerberParser) throws IOException {
@@ -168,12 +185,6 @@ public class GerberFileParser {
 
     /**
      * Собирает итоговую модель {@link BoardParameters} из списка слоёв и отверстий.
-     * Вычисляет габариты платы, количество слоёв, статистику отверстий,
-     * агрегированные показатели ширины дорожки и зазора.
-     *
-     * @param layers список всех распознанных слоёв
-     * @param holes  список всех отверстий
-     * @return заполненный объект {@link BoardParameters}
      */
     private BoardParameters buildBoardParameters(List<BoardLayer> layers, List<DrillHole> holes) {
         BoardParameters params = new BoardParameters();
@@ -225,12 +236,6 @@ public class GerberFileParser {
         return params;
     }
 
-    /**
-     * Ищет среди слоёв слой контура ({@link LayerType#OUTLINE}) и возвращает его границы.
-     *
-     * @param layers список всех слоёв
-     * @return границы контура или {@code null}, если контур не найден
-     */
     private RectBounds findOutlineBounds(List<BoardLayer> layers) {
         for (BoardLayer l : layers) {
             if (l.getType() == LayerType.OUTLINE && l.getBounds() != null) return l.getBounds();
@@ -238,13 +243,6 @@ public class GerberFileParser {
         return null;
     }
 
-    /**
-     * Вычисляет габаритный прямоугольник, охватывающий все переданные слои.
-     * Используется как запасной вариант, если слой контура отсутствует.
-     *
-     * @param layers список слоёв
-     * @return объединённые границы, или прямоугольник нулевой площади, если слои отсутствуют
-     */
     private RectBounds computeUnionBounds(List<BoardLayer> layers) {
         double minX = Double.MAX_VALUE, maxX = -Double.MAX_VALUE;
         double minY = Double.MAX_VALUE, maxY = -Double.MAX_VALUE;
@@ -261,12 +259,6 @@ public class GerberFileParser {
         return new RectBounds(minX, maxX, minY, maxY);
     }
 
-    /**
-     * Подсчитывает количество медных слоёв в списке.
-     *
-     * @param layers список слоёв
-     * @return количество слоёв с типом {@link LayerType#COPPER}
-     */
     private int countCopperLayers(List<BoardLayer> layers) {
         return (int) layers.stream().filter(l -> l.getType() == LayerType.COPPER).count();
     }

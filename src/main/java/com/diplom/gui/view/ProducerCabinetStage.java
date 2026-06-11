@@ -240,7 +240,7 @@ public class ProducerCabinetStage extends Stage {
         TextField materialsField = new TextField(
                 tariff.getSupportedMaterials() != null ? String.join(", ", tariff.getSupportedMaterials()) : ""
         );
-        materialsField.setPromptText("Материалы (через запятую, например: FR-4, Алюминий)");
+        materialsField.setPromptText("Материалы с толщиной (через запятую, например: FR-4 1.6mm, Алюминий 2.0mm)");
 
         TextField finishesField = new TextField(
                 tariff.getSupportedFinishes() != null ? String.join(", ", tariff.getSupportedFinishes()) : ""

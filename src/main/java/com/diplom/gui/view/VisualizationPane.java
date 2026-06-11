@@ -11,6 +11,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.web.WebView;
+import lombok.Getter;
 
 import java.util.LinkedHashSet;
 import java.util.HashMap;
@@ -29,6 +30,11 @@ public class VisualizationPane extends VBox {
     private SplitPane boardSplit;
     private StackPane mainContainer;
 
+    /**
+     * -- GETTER --
+     * Возвращает текущую карту документов для синхронизации цветов.
+     */
+    @Getter
     private Map<BoardLayer, Object> layerDocuments = new HashMap<>();
     private Map<BoardLayer, Color> layerColors = new HashMap<>();
     private Set<BoardLayer> visibleLayers = new HashSet<>();
@@ -167,5 +173,16 @@ public class VisualizationPane extends VBox {
             case DRILL:         return Color.web("#d3d3d3");
             default:            return Color.rgb(128, 128, 128);
         }
+    }
+
+    /**
+     * Полностью удаляет слой из визуализации.
+     */
+    public void removeLayer(BoardLayer layer) {
+        layerDocuments.remove(layer);
+        layerColors.remove(layer);
+        visibleLayers.remove(layer);
+        computeTotalBounds();
+        updateAllViews();
     }
 }

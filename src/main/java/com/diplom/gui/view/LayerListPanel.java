@@ -13,6 +13,7 @@ import lombok.Setter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 public class LayerListPanel extends VBox {
 
@@ -23,6 +24,8 @@ public class LayerListPanel extends VBox {
     private BiConsumer<BoardLayer, Boolean> onToggle;
     @Setter
     private BiConsumer<BoardLayer, Color> onColorChange;
+    @Setter
+    private Consumer<BoardLayer> onDelete;
 
     public LayerListPanel() {
         Label title = new Label("Слои платы:");
@@ -57,7 +60,8 @@ public class LayerListPanel extends VBox {
         Label colorHeader = new Label("Цвет");
         Label nameHeader = new Label("Слой");
         Label viewHeader = new Label("Вид");
-        grid.addRow(0, colorHeader, nameHeader, viewHeader);
+        Label delHeader = new Label("");  // пустой заголовок для кнопки удаления
+        grid.addRow(0, colorHeader, nameHeader, viewHeader, delHeader);
         colorHeader.setStyle("-fx-font-weight: bold;");
         nameHeader.setStyle("-fx-font-weight: bold;");
         viewHeader.setStyle("-fx-font-weight: bold;");
@@ -67,25 +71,23 @@ public class LayerListPanel extends VBox {
 
         int row = 1;
         for (BoardLayer layer : layers) {
+            // ColorPicker (как раньше)
             ColorPicker colorPicker = new ColorPicker();
             colorPicker.setPrefWidth(35);
             colorPicker.setValue(Color.BLACK);
             colorPicker.setOnAction(e -> {
-                if (onColorChange != null) {
-                    onColorChange.accept(layer, colorPicker.getValue());
-                }
+                if (onColorChange != null) onColorChange.accept(layer, colorPicker.getValue());
             });
 
-            String displayName = String.format("%s  [%s]", layer.getName(), layer.getType().toString());
+            String displayName = String.format("%s  [%s]", layer.getName(), layer.getType());
             Label label = new Label(displayName);
-            label.setMinWidth(200);
+            label.setMinWidth(150);
 
-            // Кнопка с глазом
+            // Кнопка глаза
             ToggleButton eyeBtn = new ToggleButton();
             eyeBtn.setUserData(layer);
             eyeBtn.setSelected(true);
             eyeBtn.setGraphic(new ImageView(openEye));
-
             eyeBtn.selectedProperty().addListener((obs, wasSelected, isNowSelected) -> {
                 if (isNowSelected) {
                     eyeBtn.setGraphic(new ImageView(openEye));
@@ -96,7 +98,15 @@ public class LayerListPanel extends VBox {
                 }
             });
 
-            grid.addRow(row++, colorPicker, label, eyeBtn);
+            // Кнопка удаления
+            Button deleteBtn = new Button("✕");
+            deleteBtn.setStyle("-fx-font-size: 10px; -fx-padding: 1 4;");
+            deleteBtn.setTooltip(new Tooltip("Удалить слой"));
+            deleteBtn.setOnAction(e -> {
+                if (onDelete != null) onDelete.accept(layer);
+            });
+
+            grid.addRow(row++, colorPicker, label, eyeBtn, deleteBtn);
         }
     }
 

@@ -102,9 +102,9 @@
 ## Готовые установочные пакеты
 
 
-[Installer-Linux](https://github.com/Sheal354/diplom/actions/runs/26813385501/artifacts/7355022573)
+[Installer-Linux](https://github.com/Sheal354/diplom/actions/runs/27336208087/artifacts/7559726420)
 
-[Installer-Windows](https://github.com/Sheal354/diplom/actions/runs/26813385501/artifacts/7355051087)
+[Installer-Windows](https://github.com/Sheal354/diplom/actions/runs/27336208087/artifacts/7559740404)
 
-[Installer-macOS](https://github.com/Sheal354/diplom/actions/runs/26813385501/artifacts/7355019437)
+[Installer-macOS](https://github.com/Sheal354/diplom/actions/runs/27336208087/artifacts/7559721877)
 
